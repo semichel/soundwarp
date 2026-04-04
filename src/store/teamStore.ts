@@ -9,13 +9,13 @@ export interface Team {
 interface TeamState {
   teams: Team[]
   currentTeamIndex: number
-  roundsPerTeam: number
+  maxScore: number
   currentRound: number
-  totalRounds: number
   gameOver: boolean
+  winner: string | null
 
   setTeams: (teams: Team[]) => void
-  setRoundsPerTeam: (n: number) => void
+  setMaxScore: (n: number) => void
   addScore: (teamIndex: number, points: number) => void
   nextTurn: () => void
   resetGame: () => void
@@ -24,32 +24,35 @@ interface TeamState {
 export const useTeamStore = create<TeamState>((set, get) => ({
   teams: [],
   currentTeamIndex: 0,
-  roundsPerTeam: 3,
+  maxScore: 15,
   currentRound: 1,
-  totalRounds: 0,
   gameOver: false,
+  winner: null,
 
-  setTeams: (teams) => set({ teams, currentTeamIndex: 0, currentRound: 1, gameOver: false }),
+  setTeams: (teams) => set({ teams, currentTeamIndex: 0, currentRound: 1, gameOver: false, winner: null }),
 
-  setRoundsPerTeam: (n) => set({ roundsPerTeam: n }),
+  setMaxScore: (n) => set({ maxScore: n }),
 
-  addScore: (teamIndex, points) => set((state) => ({
-    teams: state.teams.map((t, i) =>
+  addScore: (teamIndex, points) => {
+    const { teams, maxScore } = get()
+    const updated = teams.map((t, i) =>
       i === teamIndex ? { ...t, score: t.score + points } : t
-    ),
-  })),
+    )
+    // Check if any team reached max score
+    const winningTeam = updated.find(t => t.score >= maxScore)
+    if (winningTeam) {
+      set({ teams: updated, gameOver: true, winner: winningTeam.name })
+    } else {
+      set({ teams: updated })
+    }
+  },
 
   nextTurn: () => {
-    const { teams, currentTeamIndex, currentRound, roundsPerTeam } = get()
+    const { teams, currentTeamIndex, currentRound, gameOver } = get()
+    if (gameOver) return
     const nextIndex = currentTeamIndex + 1
-
     if (nextIndex >= teams.length) {
-      // All teams played this round
-      if (currentRound >= roundsPerTeam) {
-        set({ gameOver: true })
-      } else {
-        set({ currentTeamIndex: 0, currentRound: currentRound + 1 })
-      }
+      set({ currentTeamIndex: 0, currentRound: currentRound + 1 })
     } else {
       set({ currentTeamIndex: nextIndex })
     }
@@ -60,6 +63,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     currentTeamIndex: 0,
     currentRound: 1,
     gameOver: false,
+    winner: null,
   }),
 }))
 

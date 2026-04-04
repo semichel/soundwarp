@@ -27,13 +27,13 @@ type Phase = 'setup' | 'category' | 'loading' | 'playing' | 'result' | 'scoreboa
 
 export function TeamGame({ onBack }: { onBack: () => void }) {
   const { isPlaying, setPlaying, setProcessingState, setError } = useAudioStore()
-  const { teams, currentTeamIndex, currentRound, roundsPerTeam, gameOver, setTeams, setRoundsPerTeam, addScore, nextTurn, resetGame } = useTeamStore()
+  const { teams, currentTeamIndex, currentRound, maxScore, winner, setTeams, setMaxScore, addScore, nextTurn, resetGame } = useTeamStore()
   const cacheRef = useRef<EffectCache | null>(null)
 
   const [phase, setPhase] = useState<Phase>('setup')
   const [teamNames, setTeamNames] = useState(['Lag 1', 'Lag 2'])
   const [numTeams, setNumTeams] = useState(2)
-  const [rounds, setRounds] = useState(3)
+  const [targetScore, setTargetScore] = useState(15)
   const [, setActiveCategory] = useState<string | null>(null)
   const [selectedTrack, setSelectedTrack] = useState<TrackEntry | null>(null)
   const [currentGuessNum, setCurrentGuessNum] = useState(0)
@@ -84,11 +84,11 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
       score: 0,
     }))
     setTeams(newTeams)
-    setRoundsPerTeam(rounds)
+    setMaxScore(targetScore)
     setUsedCategoryKeys(new Set())
     setAvailableCategories(drawNewCategories())
     setPhase('category')
-  }, [numTeams, teamNames, rounds, setTeams, setRoundsPerTeam, drawNewCategories])
+  }, [numTeams, teamNames, targetScore, setTeams, setMaxScore, drawNewCategories])
 
   // === LOAD TRACK ===
   const loadTrack = useCallback(async (categoryKey: string) => {
@@ -256,12 +256,14 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
     setPlaying(false)
     cacheRef.current = null
     nextTurn()
-    if (gameOver || (currentTeamIndex + 1 >= teams.length && currentRound >= roundsPerTeam)) {
+    // Check gameOver AFTER nextTurn (addScore might have set it)
+    const store = useTeamStore.getState()
+    if (store.gameOver) {
       setPhase('gameover')
     } else {
       setPhase('scoreboard')
     }
-  }, [nextTurn, gameOver, currentTeamIndex, teams.length, currentRound, roundsPerTeam, setPlaying])
+  }, [nextTurn, setPlaying])
 
   const handleContinueFromScoreboard = useCallback(() => {
     setPhase('category')
@@ -322,18 +324,18 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="w-full">
-          <label className="text-sm text-gray-400">Antal rundor per lag</label>
+          <label className="text-sm text-gray-400">Först till X poäng vinner</label>
           <div className="flex gap-2 mt-1">
-            {[3, 5, 7, 10].map(n => (
+            {[10, 15, 20, 30].map(n => (
               <button
                 key={n}
                 type="button"
-                onClick={() => setRounds(n)}
+                onClick={() => setTargetScore(n)}
                 className={`flex-1 py-3 rounded-lg font-bold transition-colors ${
-                  rounds === n ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  targetScore === n ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
-                {n}
+                {n}p
               </button>
             ))}
           </div>
@@ -362,7 +364,7 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
 
         {/* Current team indicator */}
         <div className={`w-full py-3 px-4 rounded-lg text-center font-bold text-lg ${TEAM_COLORS[currentTeamIndex].bg}`}>
-          {currentTeam?.name} spelar! (Runda {currentRound}/{roundsPerTeam})
+          {currentTeam?.name} spelar! (Först till {maxScore}p)
         </div>
 
         {/* Scoreboard mini */}
@@ -431,7 +433,7 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
         <div className="w-full">
           <div className="flex justify-between text-xs text-gray-500 mb-1">
             <span>Gissning {currentGuessNum + 1} av {MAX_GUESSES}</span>
-            <span>Runda {currentRound}/{roundsPerTeam}</span>
+            <span>{currentTeam?.score ?? 0}/{maxScore}p</span>
           </div>
           <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full bg-indigo-500 transition-all duration-500"
@@ -554,7 +556,7 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex flex-col items-center gap-5 p-8 max-w-lg mx-auto">
         <h1 className="text-2xl font-bold">📊 Ställning</h1>
-        <p className="text-gray-400">Runda {currentRound} av {roundsPerTeam}</p>
+        <p className="text-gray-400">Först till {maxScore} poäng — Runda {currentRound}</p>
 
         <div className="w-full flex flex-col gap-3">
           {sorted.map((team, i) => {
@@ -575,6 +577,20 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
           })}
         </div>
 
+        {/* Score progress bars */}
+        <div className="w-full flex flex-col gap-2">
+          {teams.map((team, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs w-12 truncate">{team.name}</span>
+              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                <div className={`h-full ${TEAM_COLORS[i].bg} transition-all duration-500`}
+                  style={{ width: `${Math.min(100, (team.score / maxScore) * 100)}%` }} />
+              </div>
+              <span className="text-xs text-gray-500">{team.score}/{maxScore}</span>
+            </div>
+          ))}
+        </div>
+
         <button type="button" onClick={handleContinueFromScoreboard}
           className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-lg transition-colors">
           {currentTeam?.name} väljer kategori →
@@ -586,13 +602,13 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
   // GAME OVER
   if (phase === 'gameover') {
     const sorted = [...teams].sort((a, b) => b.score - a.score)
-    const winner = sorted[0]
-    const winnerIdx = teams.indexOf(winner)
+    const winnerTeam = sorted[0]
+    const winnerIdx = teams.indexOf(winnerTeam)
     return (
       <div className="flex flex-col items-center gap-5 p-8 max-w-lg mx-auto">
         <h1 className="text-3xl font-bold">🏆 Spelet slut!</h1>
         <div className={`py-3 px-6 rounded-xl font-bold text-xl ${TEAM_COLORS[winnerIdx].bg}`}>
-          {winner.name} vinner med {winner.score}p!
+          {winner ?? winnerTeam.name} vinner med {winnerTeam.score}p!
         </div>
 
         <div className="w-full flex flex-col gap-3">
