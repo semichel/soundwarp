@@ -69,23 +69,22 @@ export async function getPreviewUrl(
 ): Promise<{ url: string; source: 'deezer' | 'itunes' }> {
   const searchQuery = `${artist} ${title}`.trim()
 
-  // Try iTunes first — no proxy needed
+  // Try iTunes first — uses JSONP to bypass CORS on mobile
   try {
-    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&media=music&limit=5`)
-    if (res.ok) {
-      const data = await res.json()
-      const match = (data.results ?? []).find((t: ItunesResult) =>
-        t.previewUrl && matchesTrack(t.trackName, t.artistName, title, artist)
-      )
-      if (match) {
-        console.log(`[MusicService] iTunes match: ${match.trackName} - ${match.artistName}`)
-        return { url: match.previewUrl, source: 'itunes' }
-      }
-      const fallback = (data.results ?? []).find((t: ItunesResult) => t.previewUrl)
-      if (fallback) {
-        console.log(`[MusicService] iTunes fuzzy: ${fallback.trackName} - ${fallback.artistName}`)
-        return { url: fallback.previewUrl, source: 'itunes' }
-      }
+    const data = await jsonpFetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&media=music&limit=5`
+    ) as { results: ItunesResult[] }
+    const match = (data.results ?? []).find((t: ItunesResult) =>
+      t.previewUrl && matchesTrack(t.trackName, t.artistName, title, artist)
+    )
+    if (match) {
+      console.log(`[MusicService] iTunes match: ${match.trackName} - ${match.artistName}`)
+      return { url: match.previewUrl, source: 'itunes' }
+    }
+    const fallback = (data.results ?? []).find((t: ItunesResult) => t.previewUrl)
+    if (fallback) {
+      console.log(`[MusicService] iTunes fuzzy: ${fallback.trackName} - ${fallback.artistName}`)
+      return { url: fallback.previewUrl, source: 'itunes' }
     }
   } catch (e) {
     console.warn('[MusicService] iTunes search failed:', e)
@@ -168,6 +167,35 @@ interface ItunesResult {
   previewUrl: string
 }
 
+// JSONP helper — bypasses CORS by injecting a <script> tag
+// iTunes API supports JSONP via the "callback" parameter
+let _jsonpCounter = 0
+function jsonpFetch(url: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const callbackName = `_itunesJsonp_${++_jsonpCounter}`
+    const script = document.createElement('script')
+    const timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error('JSONP timeout'))
+    }, 8000)
+
+    function cleanup() {
+      clearTimeout(timeout)
+      delete (window as unknown as Record<string, unknown>)[callbackName]
+      if (script.parentNode) script.parentNode.removeChild(script)
+    }
+
+    ;(window as unknown as Record<string, unknown>)[callbackName] = (data: unknown) => {
+      cleanup()
+      resolve(data)
+    }
+
+    script.src = `${url}&callback=${callbackName}`
+    script.onerror = () => { cleanup(); reject(new Error('JSONP load failed')) }
+    document.head.appendChild(script)
+  })
+}
+
 async function searchDeezer(query: string, limit: number): Promise<MusicTrack[]> {
   const res = await fetch(`/api/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`)
   if (!res.ok) return []
@@ -186,9 +214,10 @@ async function searchDeezer(query: string, limit: number): Promise<MusicTrack[]>
 }
 
 async function searchItunes(query: string, limit: number): Promise<MusicTrack[]> {
-  const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=${limit}`)
-  if (!res.ok) return []
-  const data = await res.json()
+  // Use JSONP to bypass CORS (iTunes blocks fetch on mobile user agents)
+  const data = await jsonpFetch(
+    `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=${limit}`
+  ) as { results: ItunesResult[] }
   return (data.results ?? [])
     .filter((t: ItunesResult) => t.previewUrl)
     .map((t: ItunesResult): MusicTrack => ({
