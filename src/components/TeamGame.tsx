@@ -51,11 +51,32 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
 
   const generateChoices = useCallback((correctTrack: TrackEntry, categoryKey: string | null): TrackEntry[] => {
     const allTracks = CATEGORIES.flatMap(c => c.tracks)
+
+    // Deduplicate by title (same song can appear in multiple categories)
+    const seen = new Set<string>()
+    seen.add(correctTrack.title.toLowerCase())
+
+    const uniqueTracks = allTracks.filter(t => {
+      const key = t.title.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    // Prefer tracks from same category for harder choices
     const sameCat = categoryKey ? (CATEGORIES.find(c => c.key === categoryKey)?.tracks ?? []) : []
-    const pool = sameCat.length >= 10 ? sameCat : allTracks
-    const wrongAnswers = pool.filter(t => t.id !== correctTrack.id && t.title !== correctTrack.title)
-    const shuffled = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 9)
-    return [...shuffled, correctTrack].sort(() => Math.random() - 0.5)
+    const sameCatUnique = sameCat.filter(t => t.title.toLowerCase() !== correctTrack.title.toLowerCase())
+
+    // Take some from same category, fill rest from all
+    const fromCat = sameCatUnique.sort(() => Math.random() - 0.5).slice(0, 5)
+    const fromCatTitles = new Set(fromCat.map(t => t.title.toLowerCase()))
+    const fromAll = uniqueTracks
+      .filter(t => !fromCatTitles.has(t.title.toLowerCase()))
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 9 - fromCat.length)
+
+    const wrongAnswers = [...fromCat, ...fromAll].slice(0, 9)
+    return [...wrongAnswers, correctTrack].sort(() => Math.random() - 0.5)
   }, [])
 
   const drawNewCategories = useCallback(() => {
