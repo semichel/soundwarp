@@ -15,9 +15,20 @@ export interface MusicTrack {
 let _deezerAvailable: boolean | null = null
 async function isDeezerAvailable(): Promise<boolean> {
   if (_deezerAvailable !== null) return _deezerAvailable
+  // On GitHub Pages or static hosting, there's no proxy — skip the check
+  if (window.location.hostname.includes('github.io') || window.location.protocol === 'file:') {
+    _deezerAvailable = false
+    console.log('[MusicService] Static hosting detected — iTunes only mode')
+    return false
+  }
   try {
-    const res = await fetch('/api/deezer/track/1', { signal: AbortSignal.timeout(2000) })
-    _deezerAvailable = res.ok
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 1500)
+    const res = await fetch('/api/deezer/track/1', { signal: controller.signal })
+    clearTimeout(timeoutId)
+    // Check if response is JSON (not an HTML 404 page)
+    const contentType = res.headers.get('content-type') ?? ''
+    _deezerAvailable = res.ok && contentType.includes('json')
   } catch {
     _deezerAvailable = false
   }

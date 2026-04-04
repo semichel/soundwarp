@@ -284,6 +284,7 @@ export function AudioPlayer() {
     return (
       <div className="flex flex-col items-center gap-6 p-6 max-w-lg mx-auto">
         <h1 className="text-3xl font-bold">🎵 SoundWarp</h1>
+        <p className="text-[10px] text-gray-600">v0.2.0</p>
         <p className="text-gray-400 text-center text-sm">
           Gissa låten! Du hör den warpad — varje fel gissning gör den tydligare.
         </p>
@@ -378,7 +379,8 @@ export function AudioPlayer() {
 
         {/* Start button */}
         <button
-          onClick={() => startGame()}
+          type="button"
+          onClick={(e) => { e.preventDefault(); startGame() }}
           disabled={!selectedTrack && !activeCategory}
           className="w-full px-6 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-bold text-lg transition-colors"
         >
