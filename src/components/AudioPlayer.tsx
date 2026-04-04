@@ -27,7 +27,6 @@ type GameState = 'menu' | 'loading' | 'playing' | 'won' | 'lost'
 export function AudioPlayer() {
   const {
     isPlaying,
-    processingState,
     error,
     setPlaying,
     setProcessingState,
@@ -42,6 +41,7 @@ export function AudioPlayer() {
   const [selectedTrack, setSelectedTrack] = useState<TrackEntry | null>(null)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [audioSource, setAudioSource] = useState<'deezer' | 'itunes' | null>(null)
+  const [loadingStep, setLoadingStep] = useState('')
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -113,6 +113,7 @@ export function AudioPlayer() {
     setChoices(generateChoices(track, activeCategory))
 
     try {
+      setLoadingStep('Startar ljud...')
       const ctx = await ensureAudioContextRunning()
       setProcessingState('fetching')
       setError(null)
@@ -124,17 +125,22 @@ export function AudioPlayer() {
       if (trackAny._previewUrl) {
         previewUrl = trackAny._previewUrl
         source = (trackAny._source as 'deezer' | 'itunes') ?? 'deezer'
+        setLoadingStep(`Hämtar ljud via ${source}...`)
       } else {
+        setLoadingStep('Söker låt...')
         const result = await getPreviewUrl(track.id, track.title, track.artist)
         previewUrl = result.url
         source = result.source
+        setLoadingStep(`Hämtar ljud via ${source}...`)
       }
 
       setAudioSource(source)
       const arrayBuffer = await fetchPreviewAudio(previewUrl)
+      setLoadingStep('Dekodrar ljud...')
       const sourceBuffer = await ctx.decodeAudioData(arrayBuffer)
 
       setProcessingState('processing')
+      setLoadingStep('Warpar ljud (5 nivåer)...')
       const cache = await preRenderAllLevels(sourceBuffer)
       cacheRef.current = cache
 
@@ -387,10 +393,8 @@ export function AudioPlayer() {
     return (
       <div className="flex flex-col items-center gap-4 p-8">
         <h1 className="text-2xl font-bold">🎵 SoundWarp</h1>
-        <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 text-sm">
-          {processingState === 'fetching' ? 'Hämtar låt...' : 'Warpar ljud...'}
-        </p>
+        <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-400 text-sm">{loadingStep}</p>
         {error && (
           <div className="flex flex-col items-center gap-2">
             <p className="text-red-400 text-sm">{error}</p>
