@@ -284,7 +284,7 @@ export function AudioPlayer() {
     return (
       <div className="flex flex-col items-center gap-6 p-6 max-w-lg mx-auto">
         <h1 className="text-3xl font-bold">🎵 SoundWarp</h1>
-        <p className="text-[10px] text-gray-600">v0.3.0</p>
+        <p className="text-[10px] text-gray-600">v0.4.0</p>
         <p className="text-gray-400 text-center text-sm">
           Gissa låten! Du hör den warpad — varje fel gissning gör den tydligare.
         </p>

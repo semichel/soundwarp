@@ -11,36 +11,14 @@ export interface MusicTrack {
   source: 'deezer' | 'itunes'
 }
 
-// Detect if Deezer proxy is available (local dev or Cloudflare Worker)
-let _deezerAvailable: boolean | null = null
-async function isDeezerAvailable(): Promise<boolean> {
-  if (_deezerAvailable !== null) return _deezerAvailable
-  // On GitHub Pages or static hosting, there's no proxy — skip the check
-  if (window.location.hostname.includes('github.io') || window.location.protocol === 'file:') {
-    _deezerAvailable = false
-    console.log('[MusicService] Static hosting detected — iTunes only mode')
-    return false
-  }
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 1500)
-    const res = await fetch('/api/deezer/track/1', { signal: controller.signal })
-    clearTimeout(timeoutId)
-    // Check if response is JSON (not an HTML 404 page)
-    const contentType = res.headers.get('content-type') ?? ''
-    _deezerAvailable = res.ok && contentType.includes('json')
-  } catch {
-    _deezerAvailable = false
-  }
-  console.log(`[MusicService] Deezer proxy: ${_deezerAvailable ? 'available' : 'not available (iTunes only mode)'}`)
-  return _deezerAvailable
-}
+// Cloudflare Worker proxy URL — works from any device (mobile + desktop)
+const PROXY_URL = import.meta.env.VITE_PROXY_URL ?? 'https://soundwarp-api.semichel.workers.dev'
 
-// Search by query string — iTunes first (no proxy), Deezer if proxy available
+// Search by query string — tries both iTunes and Deezer via proxy
 export async function searchTracks(query: string, limit = 10): Promise<MusicTrack[]> {
   const results: MusicTrack[] = []
 
-  // iTunes first — always works, no proxy needed
+  // iTunes first via proxy
   try {
     const itunesResults = await searchItunes(query, limit)
     results.push(...itunesResults)
@@ -48,8 +26,8 @@ export async function searchTracks(query: string, limit = 10): Promise<MusicTrac
     console.warn('[MusicService] iTunes search failed:', e)
   }
 
-  // Fill with Deezer if proxy available and we need more
-  if (results.length < limit && await isDeezerAvailable()) {
+  // Fill with Deezer if needed
+  if (results.length < limit) {
     try {
       const deezerResults = await searchDeezer(query, limit - results.length)
       results.push(...deezerResults)
@@ -69,11 +47,11 @@ export async function getPreviewUrl(
 ): Promise<{ url: string; source: 'deezer' | 'itunes' }> {
   const searchQuery = `${artist} ${title}`.trim()
 
-  // Try iTunes first — uses JSONP to bypass CORS on mobile
+  // Try iTunes first via proxy
   try {
-    const data = await jsonpFetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&media=music&limit=5`
-    ) as { results: ItunesResult[] }
+    const res = await fetch(`${PROXY_URL}/api/itunes/search?term=${encodeURIComponent(searchQuery)}&media=music&limit=5`)
+    if (!res.ok) throw new Error(`iTunes search failed: ${res.status}`)
+    const data = await res.json() as { results: ItunesResult[] }
     const match = (data.results ?? []).find((t: ItunesResult) =>
       t.previewUrl && matchesTrack(t.trackName, t.artistName, title, artist)
     )
@@ -90,10 +68,9 @@ export async function getPreviewUrl(
     console.warn('[MusicService] iTunes search failed:', e)
   }
 
-  // Fallback to Deezer if proxy available
-  if (await isDeezerAvailable()) {
-    try {
-      const res = await fetch(`/api/deezer/search?q=${encodeURIComponent(searchQuery)}&limit=5`)
+  // Fallback to Deezer via proxy
+  try {
+    const res = await fetch(`${PROXY_URL}/api/deezer/search?q=${encodeURIComponent(searchQuery)}&limit=5`)
       if (res.ok) {
         const data = await res.json()
         const match = (data.data ?? []).find((t: DeezerSearchResult) =>
@@ -112,20 +89,13 @@ export async function getPreviewUrl(
     } catch (e) {
       console.warn('[MusicService] Deezer fallback failed:', e)
     }
-  }
 
   throw new Error(`Ingen preview hittades för "${title}" av ${artist}`)
 }
 
-// Fetch audio — iTunes URLs work directly, Deezer needs proxy
+// Fetch audio via Cloudflare proxy (handles both Deezer and iTunes URLs)
 export async function fetchPreviewAudio(previewUrl: string): Promise<ArrayBuffer> {
-  // iTunes URLs (audio-ssl.itunes.apple.com) have CORS headers — fetch directly
-  // Deezer URLs (cdnt-preview.dzcdn.net) need proxy
-  const isDeezerUrl = previewUrl.includes('dzcdn.net') || previewUrl.includes('deezer')
-  const fetchUrl = isDeezerUrl
-    ? `/api/preview?url=${encodeURIComponent(previewUrl)}`
-    : previewUrl
-
+  const fetchUrl = `${PROXY_URL}/api/preview?url=${encodeURIComponent(previewUrl)}`
   const response = await fetch(fetchUrl)
   if (!response.ok) {
     throw new Error(`Audio fetch failed: ${response.status}`)
@@ -167,37 +137,8 @@ interface ItunesResult {
   previewUrl: string
 }
 
-// JSONP helper — bypasses CORS by injecting a <script> tag
-// iTunes API supports JSONP via the "callback" parameter
-let _jsonpCounter = 0
-function jsonpFetch(url: string): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const callbackName = `_itunesJsonp_${++_jsonpCounter}`
-    const script = document.createElement('script')
-    const timeout = setTimeout(() => {
-      cleanup()
-      reject(new Error('JSONP timeout'))
-    }, 8000)
-
-    function cleanup() {
-      clearTimeout(timeout)
-      delete (window as unknown as Record<string, unknown>)[callbackName]
-      if (script.parentNode) script.parentNode.removeChild(script)
-    }
-
-    ;(window as unknown as Record<string, unknown>)[callbackName] = (data: unknown) => {
-      cleanup()
-      resolve(data)
-    }
-
-    script.src = `${url}&callback=${callbackName}`
-    script.onerror = () => { cleanup(); reject(new Error('JSONP load failed')) }
-    document.head.appendChild(script)
-  })
-}
-
 async function searchDeezer(query: string, limit: number): Promise<MusicTrack[]> {
-  const res = await fetch(`/api/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+  const res = await fetch(`${PROXY_URL}/api/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`)
   if (!res.ok) return []
   const data = await res.json()
   return (data.data ?? [])
@@ -214,10 +155,9 @@ async function searchDeezer(query: string, limit: number): Promise<MusicTrack[]>
 }
 
 async function searchItunes(query: string, limit: number): Promise<MusicTrack[]> {
-  // Use JSONP to bypass CORS (iTunes blocks fetch on mobile user agents)
-  const data = await jsonpFetch(
-    `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=${limit}`
-  ) as { results: ItunesResult[] }
+  const res = await fetch(`${PROXY_URL}/api/itunes/search?term=${encodeURIComponent(query)}&media=music&limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json() as { results: ItunesResult[] }
   return (data.results ?? [])
     .filter((t: ItunesResult) => t.previewUrl)
     .map((t: ItunesResult): MusicTrack => ({
