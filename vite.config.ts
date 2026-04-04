@@ -5,6 +5,7 @@ import http from 'node:http'
 import https from 'node:https'
 
 export default defineConfig({
+  base: '/soundwarp/',
   plugins: [
     react(),
     tailwindcss(),
