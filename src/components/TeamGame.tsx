@@ -42,6 +42,10 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
   const [loadingStep, setLoadingStep] = useState('')
   const [roundScore, setRoundScore] = useState(0)
 
+  // Category draft — 3 random categories, both teams pick from same pool
+  const [availableCategories, setAvailableCategories] = useState<string[]>([])
+  const [usedCategoryKeys, setUsedCategoryKeys] = useState<Set<string>>(new Set())
+
   const currentLevel = (4 - currentGuessNum) as RevealLevel
   const currentTeam = teams[currentTeamIndex]
 
@@ -54,6 +58,24 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
     return [...shuffled, correctTrack].sort(() => Math.random() - 0.5)
   }, [])
 
+  const drawNewCategories = useCallback(() => {
+    // Get categories that haven't been fully used yet
+    const available = CATEGORIES
+      .map(c => c.key)
+      .filter(key => !usedCategoryKeys.has(key) && getRemainingCount(key) > 0)
+
+    // If we've used all categories, reset
+    if (available.length < 3) {
+      setUsedCategoryKeys(new Set())
+      const all = CATEGORIES.filter(c => getRemainingCount(c.key) > 0).map(c => c.key)
+      const shuffled = all.sort(() => Math.random() - 0.5)
+      return shuffled.slice(0, 3)
+    }
+
+    const shuffled = available.sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 3)
+  }, [usedCategoryKeys])
+
   // === SETUP ===
   const handleStartGame = useCallback(() => {
     const newTeams: Team[] = Array.from({ length: numTeams }, (_, i) => ({
@@ -63,12 +85,38 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
     }))
     setTeams(newTeams)
     setRoundsPerTeam(rounds)
+    setUsedCategoryKeys(new Set())
+    setAvailableCategories(drawNewCategories())
     setPhase('category')
-  }, [numTeams, teamNames, rounds, setTeams, setRoundsPerTeam])
+  }, [numTeams, teamNames, rounds, setTeams, setRoundsPerTeam, drawNewCategories])
 
   // === LOAD TRACK ===
   const loadTrack = useCallback(async (categoryKey: string) => {
     setActiveCategory(categoryKey)
+
+    // Remove chosen category from available pool
+    setAvailableCategories(prev => {
+      const remaining = prev.filter(k => k !== categoryKey)
+      // If pool is empty, draw 3 new ones
+      if (remaining.length === 0) {
+        const newUsed = new Set(usedCategoryKeys)
+        newUsed.add(categoryKey)
+        setUsedCategoryKeys(newUsed)
+        // Draw new categories (will happen on next render via drawNewCategories)
+        const available = CATEGORIES
+          .map(c => c.key)
+          .filter(key => !newUsed.has(key) && getRemainingCount(key) > 0)
+        if (available.length < 3) {
+          // Reset if running low
+          setUsedCategoryKeys(new Set())
+          const all = CATEGORIES.filter(c => getRemainingCount(c.key) > 0).map(c => c.key)
+          return all.sort(() => Math.random() - 0.5).slice(0, 3)
+        }
+        return available.sort(() => Math.random() - 0.5).slice(0, 3)
+      }
+      return remaining
+    })
+
     const track = getRandomTrack(categoryKey)
     if (!track) return
 
@@ -329,20 +377,24 @@ export function TeamGame({ onBack }: { onBack: () => void }) {
           ))}
         </div>
 
-        <p className="text-gray-400 text-sm">Välj kategori:</p>
+        <p className="text-gray-400 text-sm">Välj en kategori:</p>
 
-        <div className="flex flex-wrap gap-2 justify-center">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.key}
-              type="button"
-              onClick={() => loadTrack(cat.key)}
-              className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
-            >
-              {cat.emoji} {cat.label}
-              <span className="ml-1 text-[10px] opacity-60">{getRemainingCount(cat.key)}</span>
-            </button>
-          ))}
+        <div className="flex flex-col gap-3 w-full">
+          {availableCategories.map(key => {
+            const cat = CATEGORIES.find(c => c.key === key)
+            if (!cat) return null
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => loadTrack(cat.key)}
+                className="w-full py-4 rounded-xl text-lg font-bold bg-gray-800 hover:bg-gray-700 transition-colors"
+              >
+                {cat.emoji} {cat.label}
+                <span className="ml-2 text-sm font-normal text-gray-400">{getRemainingCount(cat.key)} låtar kvar</span>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
