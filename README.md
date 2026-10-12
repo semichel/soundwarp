@@ -11,12 +11,13 @@ Pick a blueprint, then tap any open ground on the battlefield to build freely. T
 
 Gold mines earn passive income, including up to eight hours away. Every fifth wave has a boss. Finish wave 10 to unlock ascension for permanent damage and income bonuses.
 
-- Ranger: fast single-target attacks.
-- Bombard: splash damage against groups.
-- Frost spire: slows enemies.
+- Ranger: fast single-target attacks with flying arrows and bow sounds.
+- Bombard: splash damage against groups with arcing shells, explosions, and deep booms.
+- Frost spire: slows enemies with glowing crystals, icy rings, and shimmering chimes.
 - Workshop: global damage, attack speed, and passive gold upgrades.
 - Defeat: rebuild free; retain all towers and upgrades.
 - Auto waves and 1×/2×/3× combat speed.
+- Sound cues for building, upgrades, waves, bosses, victory, damage, defeat, and ascension. Menu includes a sound toggle and effects volume; these preferences persist separately from game progress. Audio starts after your first tap, pauses when the app is hidden, and needs no external assets.
 - Browser-local autosave. Saves do not sync across devices.
 
 Keyboard: focus the battlefield; 1–3 choose a blueprint, arrows move the placement preview, Shift + arrows move in smaller steps, and Enter builds/selects a tower. Escape clears the preview. Space pauses combat.
