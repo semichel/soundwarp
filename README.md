@@ -20,7 +20,7 @@ Pick a blueprint, then tap a numbered building pad. Build Rangers on pads 1 and 
 Keyboard: focus the battlefield and press 1–8 to select/build on a pad. Space pauses combat.
 
 ## Verify
-Run `node check-game.cjs` to verify gameplay logic with a simulated DOM and drawing context. Checks include portrait and landscape tap mapping and in-game tower panels. Actual browser rendering has not been visually verified in this environment.
+Run `node check-game.cjs` to verify gameplay logic with a simulated DOM and drawing context. Checks include portrait and landscape tap mapping and in-game tower panels. Chromium browser checks pass at 390×844, 844×390, 320×568, 568×320, 360×640, 640×360, and 1366×768: no page overflow, visible controls, tower taps, panel navigation, workshop purchases, help, combat, and pause. Rotation also passes, with no browser errors. Portrait and landscape screenshots were visually inspected.
 
 ## Hosting
 Deploy `dist/` on any static host such as GitHub Pages. GitHub Pages serves the gh-pages branch at https://semichel.github.io/soundwarp/. Publish dist/ to the root of that branch when updating the game.
