@@ -5,7 +5,7 @@ A self-contained incremental tower defense game inspired by medieval keep defens
 ## Play
 Open `dist/index.html` in any modern browser. No installation, server, account, or external assets are required.
 
-The game fits one screen without page scrolling. Portrait and landscape are supported; turn your phone sideways for a wider battlefield. Tower blueprints and combat controls stay visible. Workshop, Ascend, tower upgrades, and Menu open inside the game. Menu includes fullscreen where supported, help, and save settings.
+The game fills one terrain-backed frame without page scrolling. The title, resources, wave status, tower choices, combat controls, and menus are all inside that frame; there is no separate page header or footer. Portrait and landscape are supported; turn your phone sideways for a wider battlefield. Tower blueprints and combat controls stay visible. Workshop, Ascend, tower upgrades, and Menu open inside the game. Menu includes fullscreen where supported, help, and save settings.
 
 Pick a blueprint, then tap a numbered building pad. Build Rangers on pads 1 and 2 and start a wave. Click a built tower to upgrade it. Gold mines earn passive income, including up to eight hours away. Every fifth wave has a boss. Finish wave 10 to unlock ascension for permanent damage and income bonuses.
 
