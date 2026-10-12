@@ -1,73 +1,24 @@
-# React + TypeScript + Vite
+# Emberkeep
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A self-contained incremental tower defense game inspired by medieval keep defense.
 
-Currently, two official plugins are available:
+## Play
+Open `dist/index.html` in any modern browser. No installation, server, account, or external assets are required.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Pick a blueprint, then click a numbered building pad. Build Rangers on pads 1 and 2 and start a wave. Click a built tower to upgrade it. Gold mines earn passive income, including up to eight hours away. Every fifth wave has a boss. Finish wave 10 to unlock ascension for permanent damage and income bonuses.
 
-## React Compiler
+- Ranger: fast single-target attacks.
+- Bombard: splash damage against groups.
+- Frost spire: slows enemies.
+- Workshop: global damage, attack speed, and passive gold upgrades.
+- Defeat: rebuild free; retain all towers and upgrades.
+- Auto waves and 1×/2×/3× combat speed.
+- Browser-local autosave. Saves do not sync across devices.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Keyboard: focus the battlefield and press 1–8 to select/build on a pad. Space pauses combat.
 
-## Expanding the ESLint configuration
+## Verify
+Run `node check-game.cjs` to verify gameplay logic with a simulated DOM and drawing context. Actual browser rendering has not been visually verified in this environment.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Hosting
+Deploy `dist/` on any static host such as GitHub Pages. GitHub Pages serves the gh-pages branch at https://semichel.github.io/soundwarp/. Publish dist/ to the root of that branch when updating the game.
