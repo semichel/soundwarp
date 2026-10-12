@@ -13,12 +13,12 @@ console.log('PASS: JS syntax, canvas rendering, tower purchase, wave combat and 
 // Object-fit containment must map taps to game coordinates in either orientation.
 for(const [width,height] of [[390,600],[640,220]]){
  const mobile=load();mobile.run(`canvas.getBoundingClientRect=()=>({left:10,top:20,width:${width},height:${height}})`);
- const scale=Math.min(width/1000,height/620),left=10+(width-1000*scale)/2,top=20+(height-620*scale)/2;
- mobile.run(`canvas.onclick({clientX:${left+115*scale},clientY:${top+235*scale}})`);
+ const a=mobile.run('fieldToClient(115,235)'),b=mobile.run('fieldToClient(280,240)');
+ mobile.run(`canvas.onclick({clientX:${a.x},clientY:${a.y}})`);
  assert.ok(Math.abs(mobile.run('s.towers[0].x')-115)<1e-6);
- mobile.run(`canvas.onclick({clientX:${left+280*scale},clientY:${top+240*scale}})`);
+ mobile.run(`canvas.onclick({clientX:${b.x},clientY:${b.y}})`);
  assert.ok(Math.abs(mobile.run('s.towers[1].x')-280)<1e-6);
- mobile.run(`canvas.onclick({clientX:${left+115*scale},clientY:${top+235*scale}})`);
+ mobile.run(`canvas.onclick({clientX:${a.x},clientY:${a.y}})`);
  assert.equal(mobile.run('activePanel'),'tower');mobile.run('closePanel()');assert.equal(mobile.run('activePanel'),null);
  mobile.run('canvas.onclick({clientX:10,clientY:20})');assert.equal(mobile.run('selected'),0);
 }
@@ -31,3 +31,5 @@ const oldSave=JSON.parse(free.store.get('emberkeep-v1'));oldSave.towers=[{pad:0,
 const many=load();many.run('s.gold=10000');for(const [x,y] of [[50,80],[120,80],[270,80],[350,80],[450,80],[530,80],[610,80],[690,80],[770,80],[850,80],[930,80]])assert.equal(many.run(`placeTower(${x},${y})`),true);assert.equal(many.run('s.towers.length'),11);
 const poor=load();poor.run('s.gold=0');assert.equal(poor.run('placeTower(90,285)'),false);assert.equal(poor.run('s.towers.length'),0);
 console.log('PASS: arbitrary placement, road/keep/edge/overlap rejection without spending gold, coordinate save/reload, legacy save migration, more than eight towers, and insufficient funds.');
+
+const upright=load();upright.run('canvas.getBoundingClientRect=()=>({left:0,top:0,width:390,height:580});draw(.016)');assert.equal(upright.run('canvas.width'),620);assert.equal(upright.run('canvas.height'),1000);for(const [x,y] of [[90,285],[380,250],[800,80]]){const pt=upright.run(`fieldToClient(${x},${y})`);const back=upright.run(`fieldPoint({clientX:${pt.x},clientY:${pt.y}})`);assert.ok(Math.abs(back.x-x)<1e-6&&Math.abs(back.y-y)<1e-6);}upright.run('canvas.onkeydown({key:"ArrowDown",preventDefault(){}})');assert.equal(upright.run('placement.x'),135);assert.equal(upright.run('placement.y'),235);console.log('PASS: tall upright map, reversible portrait tap mapping, and screen-relative keyboard movement.');

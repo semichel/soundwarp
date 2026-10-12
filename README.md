@@ -5,7 +5,7 @@ A self-contained incremental tower defense game inspired by medieval keep defens
 ## Play
 Open `dist/index.html` in any modern browser. No installation, server, account, or external assets are required.
 
-The game fills one terrain-backed frame without page scrolling. The title, resources, wave status, tower choices, combat controls, and menus are all inside that frame; there is no separate page header or footer. Portrait and landscape are supported; turn your phone sideways for a wider battlefield. Tower blueprints and combat controls stay visible. Workshop, Ascend, tower upgrades, and Menu open inside the game. Menu includes fullscreen where supported, help, and save settings.
+The game fills one terrain-backed frame without page scrolling. The title, resources, wave status, tower choices, combat controls, and menus are all inside that frame; there is no separate page header or footer. Upright phone play is the main layout: the road runs from top to bottom on a taller battlefield, with upright tower art and correctly mapped taps. Landscape remains supported. Tower blueprints and combat controls stay visible. Workshop, Ascend, tower upgrades, and Menu open inside the game. Menu includes fullscreen where supported, help, and save settings.
 
 Pick a blueprint, then tap any open ground on the battlefield to build freely. There are no fixed pads or eight-tower limit. Keep towers clear of the road, keep, edges, and each other. A pointer preview shows the attack range and whether placement is valid. Tap a built tower to upgrade it. Start with two Rangers near the road. Existing saves with numbered-pad towers migrate to coordinates automatically without losing upgrades.
 
